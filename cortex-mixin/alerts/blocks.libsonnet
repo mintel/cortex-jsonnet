@@ -9,18 +9,18 @@
           alert: 'CortexIngesterHasNotShippedBlocks',
           'for': '15m',
           expr: |||
-            (min by(%(alert_aggregation_labels)s, instance) (time() - thanos_objstore_bucket_last_successful_upload_time{namespace="%(namespace)s", job=~".+/ingester.*"}) > 60 * 60 * 4)
+            (min by(%(alert_aggregation_labels)s, instance) (time() - thanos_objstore_bucket_last_successful_upload_time{namespace="cortex", job=~".+/ingester.*"}) > 60 * 60 * 4)
             and
-            (max by(%(alert_aggregation_labels)s, instance) (thanos_objstore_bucket_last_successful_upload_time{namespace="%(namespace)s", job=~".+/ingester.*"}) > 0)
+            (max by(%(alert_aggregation_labels)s, instance) (thanos_objstore_bucket_last_successful_upload_time{namespace="cortex", job=~".+/ingester.*"}) > 0)
             and
             # Only if the ingester has ingested samples over the last 4h.
-            (max by(%(alert_aggregation_labels)s, instance) (rate(cortex_ingester_ingested_samples_total{namespace="%(namespace)s" [4h])) > 0)
+            (max by(%(alert_aggregation_labels)s, instance) (rate(cortex_ingester_ingested_samples_total{namespace="cortex" [4h])) > 0)
             and
             # Only if the ingester was ingesting samples 4h ago. This protects from the case the ingester instance
             # had ingested samples in the past, then no traffic was received for a long period and then it starts
             # receiving samples again. Without this check, the alert would fire as soon as it gets back receiving
             # samples, while the a block shipping is expected within the next 4h.
-            (max by(%(alert_aggregation_labels)s, instance) (rate(cortex_ingester_ingested_samples_total{namespace="%(namespace)s"}[1h] offset 4h)) > 0)
+            (max by(%(alert_aggregation_labels)s, instance) (rate(cortex_ingester_ingested_samples_total{namespace="cortex"}[1h] offset 4h)) > 0)
           ||| % $._config,
           labels: {
             severity: 'critical',
@@ -37,9 +37,9 @@
           alert: 'CortexIngesterHasNotShippedBlocksSinceStart',
           'for': '4h',
           expr: |||
-            (max by(%(alert_aggregation_labels)s, instance) (thanos_objstore_bucket_last_successful_upload_time{namespace="%(namespace)s", job=~".+/ingester.*"}) == 0)
+            (max by(%(alert_aggregation_labels)s, instance) (thanos_objstore_bucket_last_successful_upload_time{namespace="cortex", job=~".+/ingester.*"}) == 0)
             and
-            (max by(%(alert_aggregation_labels)s, instance) (rate(cortex_ingester_ingested_samples_total{namespace="%(namespace)s"}[4h])) > 0)
+            (max by(%(alert_aggregation_labels)s, instance) (rate(cortex_ingester_ingested_samples_total{namespace="cortex"}[4h])) > 0)
           ||| % $._config,
           labels: {
             severity: 'critical',
@@ -57,9 +57,9 @@
           alert: 'CortexIngesterHasUnshippedBlocks',
           'for': '15m',
           expr: |||
-            (time() - cortex_ingester_oldest_unshipped_block_timestamp_seconds{namespace="%(namespace)s"} > 3600)
+            (time() - cortex_ingester_oldest_unshipped_block_timestamp_seconds{namespace="cortex"} > 3600)
             and
-            (cortex_ingester_oldest_unshipped_block_timestamp_seconds{namespace="%(namespace)s"} > 0)
+            (cortex_ingester_oldest_unshipped_block_timestamp_seconds{namespace="cortex"} > 0)
           |||,
           labels: {
             severity: 'critical',
@@ -77,7 +77,7 @@
           alert: 'CortexIngesterTSDBHeadCompactionFailed',
           'for': '15m',
           expr: |||
-            rate(cortex_ingester_tsdb_compactions_failed_total{namespace="%(namespace)s"}[5m]) > 0
+            rate(cortex_ingester_tsdb_compactions_failed_total{namespace="cortex"}[5m]) > 0
           |||,
           labels: {
             severity: 'critical',
@@ -91,7 +91,7 @@
         {
           alert: 'CortexIngesterTSDBHeadTruncationFailed',
           expr: |||
-            rate(cortex_ingester_tsdb_head_truncations_failed_total{namespace="%(namespace)s"}[5m]) > 0
+            rate(cortex_ingester_tsdb_head_truncations_failed_total{namespace="cortex"}[5m]) > 0
           |||,
           labels: {
             severity: 'critical',
@@ -105,7 +105,7 @@
         {
           alert: 'CortexIngesterTSDBCheckpointCreationFailed',
           expr: |||
-            rate(cortex_ingester_tsdb_checkpoint_creations_failed_total{namespace="%(namespace)s"}[5m]) > 0
+            rate(cortex_ingester_tsdb_checkpoint_creations_failed_total{namespace="cortex"}[5m]) > 0
           |||,
           labels: {
             severity: 'critical',
@@ -133,7 +133,7 @@
         {
           alert: 'CortexIngesterTSDBWALTruncationFailed',
           expr: |||
-            rate(cortex_ingester_tsdb_wal_truncations_failed_total{namespace="%(namespace)s"}[5m]) > 0
+            rate(cortex_ingester_tsdb_wal_truncations_failed_total{namespace="cortex"}[5m]) > 0
           |||,
           labels: {
             severity: 'warning',
@@ -147,7 +147,7 @@
         {
           alert: 'CortexIngesterTSDBWALCorrupted',
           expr: |||
-            rate(cortex_ingester_tsdb_wal_corruptions_total{namespace="%(namespace)s"}[5m]) > 0
+            rate(cortex_ingester_tsdb_wal_corruptions_total{namespace="cortex"}[5m]) > 0
           |||,
           labels: {
             severity: 'critical',
@@ -162,7 +162,7 @@
           alert: 'CortexIngesterTSDBWALWritesFailed',
           'for': '3m',
           expr: |||
-            rate(cortex_ingester_tsdb_wal_writes_failed_total{namespace="%(namespace)s"}[1m]) > 0
+            rate(cortex_ingester_tsdb_wal_writes_failed_total{namespace="cortex"}[1m]) > 0
           |||,
           labels: {
             severity: 'critical',
@@ -178,9 +178,9 @@
           alert: 'CortexQuerierHasNotScanTheBucket',
           'for': '5m',
           expr: |||
-            (time() - cortex_querier_blocks_last_successful_scan_timestamp_seconds{namespace="%(namespace)s"} > 60 * 30)
+            (time() - cortex_querier_blocks_last_successful_scan_timestamp_seconds{namespace="cortex"} > 60 * 30)
             and
-            cortex_querier_blocks_last_successful_scan_timestamp_seconds{namespace="%(namespace)s"} > 0
+            cortex_querier_blocks_last_successful_scan_timestamp_seconds{namespace="cortex"} > 0
           |||,
           labels: {
             severity: 'critical',
@@ -199,12 +199,12 @@
           expr: |||
             100 * (
               (
-                sum by(%(alert_aggregation_labels)s) (rate(cortex_querier_storegateway_refetches_per_query_count{namespace="%(namespace)s"}[5m]))
+                sum by(%(alert_aggregation_labels)s) (rate(cortex_querier_storegateway_refetches_per_query_count{namespace="cortex"}[5m]))
                 -
-                sum by(%(alert_aggregation_labels)s) (rate(cortex_querier_storegateway_refetches_per_query_bucket{namespace="%(namespace)s", le="0.0"}[5m]))
+                sum by(%(alert_aggregation_labels)s) (rate(cortex_querier_storegateway_refetches_per_query_bucket{namespace="cortex", le="0.0"}[5m]))
               )
               /
-              sum by(%(alert_aggregation_labels)s) (rate(cortex_querier_storegateway_refetches_per_query_count{namespace="%(namespace)s"}[5m]))
+              sum by(%(alert_aggregation_labels)s) (rate(cortex_querier_storegateway_refetches_per_query_count{namespace="cortex"}[5m]))
             )
             > 1
           ||| % $._config,
@@ -222,9 +222,9 @@
           alert: 'CortexStoreGatewayHasNotSyncTheBucket',
           'for': '5m',
           expr: |||
-            (time() - cortex_bucket_stores_blocks_last_successful_sync_timestamp_seconds{namespace="%(namespace)s", component="store-gateway"} > 60 * 30)
+            (time() - cortex_bucket_stores_blocks_last_successful_sync_timestamp_seconds{namespace="cortex", component="store-gateway"} > 60 * 30)
             and
-            cortex_bucket_stores_blocks_last_successful_sync_timestamp_seconds{namespace="%(namespace)s". component="store-gateway"} > 0
+            cortex_bucket_stores_blocks_last_successful_sync_timestamp_seconds{namespace="cortex". component="store-gateway"} > 0
           |||,
           labels: {
             severity: 'critical',
@@ -239,7 +239,7 @@
           // Alert if the bucket index has not been updated for a given user.
           alert: 'CortexBucketIndexNotUpdated',
           expr: |||
-            min by(%(alert_aggregation_labels)s, user) (time() - cortex_bucket_index_last_successful_update_timestamp_seconds{namespace="%(namespace)s"}) > 7200
+            min by(%(alert_aggregation_labels)s, user) (time() - cortex_bucket_index_last_successful_update_timestamp_seconds{namespace="cortex"}) > 7200
           ||| % $._config,
           labels: {
             severity: 'critical',
@@ -255,7 +255,7 @@
           alert: 'CortexTenantHasPartialBlocks',
           'for': '6h',
           expr: |||
-            max by(%(alert_aggregation_labels)s, user) (cortex_bucket_blocks_partials_count{namespace="%(namespace)s"}) > 0
+            max by(%(alert_aggregation_labels)s, user) (cortex_bucket_blocks_partials_count{namespace="cortex"}) > 0
           ||| % $._config,
           labels: {
             severity: 'warning',

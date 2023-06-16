@@ -8,7 +8,7 @@
           alert: 'CortexCompactorHasNotSuccessfullyCleanedUpBlocks',
           'for': '1h',
           expr: |||
-            (time() - cortex_compactor_block_cleanup_last_successful_run_timestamp_seconds{namespace="%(namespace)s"} > 60 * 60 * 6)
+            (time() - cortex_compactor_block_cleanup_last_successful_run_timestamp_seconds{namespace="cortex"} > 60 * 60 * 6)
           |||,
           labels: {
             severity: 'critical',
@@ -24,9 +24,9 @@
           alert: 'CortexCompactorHasNotSuccessfullyRunCompaction',
           'for': '1h',
           expr: |||
-            (time() - cortex_compactor_last_successful_run_timestamp_seconds{namespace="%(namespace)s"} > 60 * 60 * 24)
+            (time() - cortex_compactor_last_successful_run_timestamp_seconds{namespace="cortex"} > 60 * 60 * 24)
             and
-            (cortex_compactor_last_successful_run_timestamp_seconds{namespace="%(namespace)s"} > 0)
+            (cortex_compactor_last_successful_run_timestamp_seconds{namespace="cortex"} > 0)
           |||,
           labels: {
             severity: 'critical',
@@ -42,7 +42,7 @@
           alert: 'CortexCompactorHasNotSuccessfullyRunCompaction',
           'for': '24h',
           expr: |||
-            cortex_compactor_last_successful_run_timestamp_seconds{namespace="%(namespace)s"} == 0
+            cortex_compactor_last_successful_run_timestamp_seconds{namespace="cortex"} == 0
           |||,
           labels: {
             severity: 'critical',
@@ -57,7 +57,7 @@
           // Alert if compactor failed to run 2 consecutive compactions.
           alert: 'CortexCompactorHasNotSuccessfullyRunCompaction',
           expr: |||
-            increase(cortex_compactor_runs_failed_total{namespace="%(namespace)s"}[2h]) >= 2
+            increase(cortex_compactor_runs_failed_total{namespace="cortex"}[2h]) >= 2
           |||,
           labels: {
             severity: 'critical',
@@ -73,9 +73,9 @@
           alert: 'CortexCompactorHasNotUploadedBlocks',
           'for': '15m',
           expr: |||
-            (time() - thanos_objstore_bucket_last_successful_upload_time{namespace="%(namespace)s", job=~".+/%(compactor)s"} > 60 * 60 * 24)
+            (time() - thanos_objstore_bucket_last_successful_upload_time{namespace="cortex", job=~".+/%(compactor)s"} > 60 * 60 * 24)
             and
-            (thanos_objstore_bucket_last_successful_upload_time{namespace="%(namespace)s", job=~".+/%(compactor)s"} > 0)
+            (thanos_objstore_bucket_last_successful_upload_time{namespace="cortex", job=~".+/%(compactor)s"} > 0)
           ||| % $._config.job_names,
           labels: {
             severity: 'critical',
@@ -91,7 +91,7 @@
           alert: 'CortexCompactorHasNotUploadedBlocks',
           'for': '24h',
           expr: |||
-            thanos_objstore_bucket_last_successful_upload_time{namespace="%(namespace)s", job=~".+/%(compactor)s"} == 0
+            thanos_objstore_bucket_last_successful_upload_time{namespace="cortex", job=~".+/%(compactor)s"} == 0
           ||| % $._config.job_names,
           labels: {
             severity: 'critical',
