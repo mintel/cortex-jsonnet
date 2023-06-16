@@ -12,7 +12,7 @@
           alert: 'CortexIngesterUnhealthy',
           'for': '15m',
           expr: |||
-            min by (%s) (cortex_ring_members{state="Unhealthy", name="ingester"}) > 0
+            min by (%s) (cortex_ring_members{namespace="%(namespace)s", state="Unhealthy", name="ingester"}) > 0
           ||| % $._config.alert_aggregation_labels,
           labels: {
             severity: 'critical',
@@ -28,9 +28,9 @@
           // Note if alert_aggregation_labels is "job", this will repeat the label. But
           // prometheus seems to tolerate that.
           expr: |||
-            100 * sum by (%(group_by)s, job, route) (rate(cortex_request_duration_seconds_count{status_code=~"5..",route!~"%(excluded_routes)s"}[1m]))
+            100 * sum by (%(group_by)s, job, route) (rate(cortex_request_duration_seconds_count{namespace="%(namespace)s", status_code=~"5..",route!~"%(excluded_routes)s"}[1m]))
               /
-            sum by (%(group_by)s, job, route) (rate(cortex_request_duration_seconds_count{route!~"%(excluded_routes)s"}[1m]))
+            sum by (%(group_by)s, job, route) (rate(cortex_request_duration_seconds_count{namespace="%(namespace)s", route!~"%(excluded_routes)s"}[1m]))
               > 1
           ||| % {
             group_by: $._config.alert_aggregation_labels,
@@ -49,7 +49,7 @@
         {
           alert: 'CortexRequestLatency',
           expr: |||
-            %(group_prefix_jobs)s_route:cortex_request_duration_seconds:99quantile{route!~"%(excluded_routes)s"}
+            %(group_prefix_jobs)s_route:cortex_request_duration_seconds:99quantile{namespace="%(namespace)s", route!~"%(excluded_routes)s"}
                >
             %(cortex_p99_latency_threshold_seconds)s
           ||| % $._config {
@@ -77,9 +77,9 @@
           // We also have a 3h grace-period for creation of tables which means the we can fail for 3h before it's an outage.
           alert: 'CortexTableSyncFailure',
           expr: |||
-            100 * rate(cortex_table_manager_sync_duration_seconds_count{status_code!~"2.."}[15m])
+            100 * rate(cortex_table_manager_sync_duration_seconds_count{namespace="%(namespace)s", status_code!~"2.."}[15m])
               /
-            rate(cortex_table_manager_sync_duration_seconds_count[15m])
+            rate(cortex_table_manager_sync_duration_seconds_count{namespace="%(namespace)s"}[15m])
               > 10
           |||,
           'for': '30m',
@@ -112,7 +112,7 @@
         {
           alert: 'CortexInconsistentRuntimeConfig',
           expr: |||
-            count(count by(%s, job, sha256) (cortex_runtime_config_hash)) without(sha256) > 1
+            count(count by(%s, job, sha256) (cortex_runtime_config_hash{namespace="%(namespace)s"})) without(sha256) > 1
           ||| % $._config.alert_aggregation_labels,
           'for': '1h',
           labels: {
@@ -128,7 +128,7 @@
           alert: 'CortexBadRuntimeConfig',
           expr: |||
             # The metric value is reset to 0 on error while reloading the config at runtime.
-            cortex_runtime_config_last_reload_successful == 0
+            cortex_runtime_config_last_reload_successful{namespace="%(namespace)s"} == 0
           |||,
           // Alert quicker for human errors.
           'for': '5m',
@@ -144,7 +144,7 @@
         {
           alert: 'CortexFrontendQueriesStuck',
           expr: |||
-            sum by (%s) (cortex_query_frontend_queue_length) > 1
+            sum by (%s) (cortex_query_frontend_queue_length{namespace="%(namespace)s"}) > 1
           ||| % $._config.alert_aggregation_labels,
           'for': '5m',  // We don't want to block for longer.
           labels: {
@@ -159,7 +159,7 @@
         {
           alert: 'CortexSchedulerQueriesStuck',
           expr: |||
-            sum by (%s) (cortex_query_scheduler_queue_length) > 1
+            sum by (%s) (cortex_query_scheduler_queue_length{namespace="%(namespace)s"}) > 1
           ||| % $._config.alert_aggregation_labels,
           'for': '5m',  // We don't want to block for longer.
           labels: {
@@ -192,7 +192,7 @@
         {
           alert: 'CortexIngesterRestarts',
           expr: |||
-            changes(process_start_time_seconds{job=~".+(cortex|ingester.*)"}[30m]) >= 2
+            changes(process_start_time_seconds{namespace="%(namespace)s", job=~".+(cortex|ingester.*)"}[30m]) >= 2
           |||,
           labels: {
             // This alert is on a cause not symptom. A couple of ingesters restarts may be suspicious but
@@ -209,7 +209,7 @@
         {
           alert: 'CortexTransferFailed',
           expr: |||
-            max_over_time(cortex_shutdown_duration_seconds_count{op="transfer",status!="success"}[15m])
+            max_over_time(cortex_shutdown_duration_seconds_count{namespace="%(namespace)s", op="transfer",status!="success"}[15m])
           |||,
           'for': '5m',
           labels: {
@@ -227,9 +227,9 @@
           // to 10 hours.
           // Ignore cortex_oldest_unflushed_chunk_timestamp_seconds that are zero (eg. distributors).
           expr: |||
-            (time() - cortex_oldest_unflushed_chunk_timestamp_seconds > 36000)
+            (time() - cortex_oldest_unflushed_chunk_timestamp_seconds{namespace="%(namespace)s"} > 36000)
               and
-            (cortex_oldest_unflushed_chunk_timestamp_seconds > 0)
+            (cortex_oldest_unflushed_chunk_timestamp_seconds{namespace="%(namespace)s"} > 0)
           |||,
           'for': '5m',
           labels: {
@@ -245,9 +245,9 @@
           alert: 'CortexKVStoreFailure',
           expr: |||
             (
-              sum by(%s, pod, status_code, kv_name) (rate(cortex_kv_request_duration_seconds_count{status_code!~"2.+"}[1m]))
+              sum by(%s, pod, status_code, kv_name) (rate(cortex_kv_request_duration_seconds_count{namespace="%(namespace)s", status_code!~"2.+"}[1m]))
               /
-              sum by(%s, pod, status_code, kv_name) (rate(cortex_kv_request_duration_seconds_count[1m]))
+              sum by(%s, pod, status_code, kv_name) (rate(cortex_kv_request_duration_seconds_count{namespace="%(namespace)s"}[1m]))
             )
             # We want to get alerted only in case there's a constant failure.
             == 1
@@ -265,7 +265,7 @@
         {
           alert: 'CortexMemoryMapAreasTooHigh',
           expr: |||
-            process_memory_map_areas{job=~".+(cortex|ingester.*|store-gateway)"} / process_memory_map_areas_limit{job=~".+(cortex|ingester.*|store-gateway)"} > 0.8
+            process_memory_map_areas{namespace="%(namespace)s", job=~".+(cortex|ingester.*|store-gateway)"} / process_memory_map_areas_limit{namespace="%(namespace)s", job=~".+(cortex|ingester.*|store-gateway)"} > 0.8
           |||,
           'for': '5m',
           labels: {
@@ -286,9 +286,9 @@
           alert: 'CortexIngesterReachingSeriesLimit',
           expr: |||
             (
-                (cortex_ingester_memory_series / ignoring(limit) cortex_ingester_instance_limits{limit="max_series"})
+                (cortex_ingester_memory_series{namespace="%(namespace)s"} / ignoring(limit) cortex_ingester_instance_limits{namespace="%(namespace)s", limit="max_series"})
                 and ignoring (limit)
-                (cortex_ingester_instance_limits{limit="max_series"} > 0)
+                (cortex_ingester_instance_limits{namespace="%(namespace)s", limit="max_series"} > 0)
             ) > 0.8
           |||,
           'for': '3h',
@@ -305,9 +305,9 @@
           alert: 'CortexIngesterReachingSeriesLimit',
           expr: |||
             (
-                (cortex_ingester_memory_series / ignoring(limit) cortex_ingester_instance_limits{limit="max_series"})
+                (cortex_ingester_memory_series{namespace="%(namespace)s"} / ignoring(limit) cortex_ingester_instance_limits{namespace="%(namespace)s", limit="max_series"})
                 and ignoring (limit)
-                (cortex_ingester_instance_limits{limit="max_series"} > 0)
+                (cortex_ingester_instance_limits{namespace="%(namespace)s", limit="max_series"} > 0)
             ) > 0.9
           |||,
           'for': '5m',
@@ -324,9 +324,9 @@
           alert: 'CortexIngesterReachingTenantsLimit',
           expr: |||
             (
-                (cortex_ingester_memory_users / ignoring(limit) cortex_ingester_instance_limits{limit="max_tenants"})
+                (cortex_ingester_memory_users{namespace="%(namespace)s"} / ignoring(limit) cortex_ingester_instance_limits{namespace="%(namespace)s", limit="max_tenants"})
                 and ignoring (limit)
-                (cortex_ingester_instance_limits{limit="max_tenants"} > 0)
+                (cortex_ingester_instance_limits{namespace="%(namespace)s", limit="max_tenants"} > 0)
             ) > 0.7
           |||,
           'for': '5m',
@@ -343,9 +343,9 @@
           alert: 'CortexIngesterReachingTenantsLimit',
           expr: |||
             (
-                (cortex_ingester_memory_users / ignoring(limit) cortex_ingester_instance_limits{limit="max_tenants"})
+                (cortex_ingester_memory_users{namespace="%(namespace)s"} / ignoring(limit) cortex_ingester_instance_limits{namespace="%(namespace)s", limit="max_tenants"})
                 and ignoring (limit)
-                (cortex_ingester_instance_limits{limit="max_tenants"} > 0)
+                (cortex_ingester_instance_limits{namespace="%(namespace)s", limit="max_tenants"} > 0)
             ) > 0.8
           |||,
           'for': '5m',
@@ -362,9 +362,9 @@
           alert: 'CortexDistributorReachingInflightPushRequestLimit',
           expr: |||
             (
-                (cortex_distributor_inflight_push_requests / ignoring(limit) cortex_distributor_instance_limits{limit="max_inflight_push_requests"})
+                (cortex_distributor_inflight_push_requests{namespace="%(namespace)s"} / ignoring(limit) cortex_distributor_instance_limits{namespace="%(namespace)s", limit="max_inflight_push_requests"})
                 and ignoring (limit)
-                (cortex_distributor_instance_limits{limit="max_inflight_push_requests"} > 0)
+                (cortex_distributor_instance_limits{namespace="%(namespace)s", limit="max_inflight_push_requests"} > 0)
             ) > 0.8
           |||,
           'for': '5m',
@@ -386,7 +386,7 @@
           // Alert immediately if WAL is corrupt.
           alert: 'CortexWALCorruption',
           expr: |||
-            increase(cortex_ingester_wal_corruptions_total[5m]) > 0
+            increase(cortex_ingester_wal_corruptions_total{namespace="%(namespace)s"}[5m]) > 0
           |||,
           labels: {
             severity: 'critical',
@@ -401,7 +401,7 @@
           // One or more failed checkpoint creation is a warning.
           alert: 'CortexCheckpointCreationFailed',
           expr: |||
-            increase(cortex_ingester_checkpoint_creations_failed_total[10m]) > 0
+            increase(cortex_ingester_checkpoint_creations_failed_total{namespace="%(namespace)s"}[10m]) > 0
           |||,
           labels: {
             severity: 'warning',
@@ -416,7 +416,7 @@
           // Two or more failed checkpoint creation in 1h means something is wrong.
           alert: 'CortexCheckpointCreationFailed',
           expr: |||
-            increase(cortex_ingester_checkpoint_creations_failed_total[1h]) > 1
+            increase(cortex_ingester_checkpoint_creations_failed_total{namespace="%(namespace)s"}[1h]) > 1
           |||,
           labels: {
             severity: 'critical',
@@ -431,7 +431,7 @@
           // One or more failed checkpoint deletion is a warning.
           alert: 'CortexCheckpointDeletionFailed',
           expr: |||
-            increase(cortex_ingester_checkpoint_deletions_failed_total[10m]) > 0
+            increase(cortex_ingester_checkpoint_deletions_failed_total{namespace="%(namespace)s"}[10m]) > 0
           |||,
           labels: {
             severity: 'warning',
@@ -447,7 +447,7 @@
           // We give this more buffer than creation as this is a less critical operation.
           alert: 'CortexCheckpointDeletionFailed',
           expr: |||
-            increase(cortex_ingester_checkpoint_deletions_failed_total[2h]) > 1
+            increase(cortex_ingester_checkpoint_deletions_failed_total{namespace="%(namespace)s"}[2h]) > 1
           |||,
           labels: {
             severity: 'critical',
@@ -483,7 +483,7 @@
                 ==
               0
             )
-            * on(%s) group_left max by(%s) (cortex_build_info)
+            * on(%s) group_left max by(%s) (cortex_build_info{namespace="%(namespace)s"})
           ||| % [$._config.alert_aggregation_labels, $._config.alert_aggregation_labels],
           'for': '15m',
           labels: {
@@ -507,7 +507,7 @@
                 ==
               0
             )
-            * on(%s) group_left max by(%s) (cortex_build_info)
+            * on(%s) group_left max by(%s) (cortex_build_info{namespace="%(namespace)s"})
           ||| % [$._config.alert_aggregation_labels, $._config.alert_aggregation_labels],
           'for': '15m',
           labels: {
@@ -530,12 +530,12 @@
           expr: |||
             (
               4 *
-              sum by (%s) (cortex_ingester_memory_series * cortex_ingester_chunk_size_bytes_sum / cortex_ingester_chunk_size_bytes_count)
+              sum by (%s) (cortex_ingester_memory_series{namespace="%(namespace)s"} * cortex_ingester_chunk_size_bytes_sum{namespace="%(namespace)s"} / cortex_ingester_chunk_size_bytes_count{namespace="%(namespace)s"})
                / 1e9
             )
               >
             (
-              sum by (%s) (memcached_limit_bytes{job=~".+/memcached"}) / 1e9
+              sum by (%s) (memcached_limit_bytes{job=~".+/memcached", namespace="%(namespace)s"}) / 1e9
             )
           ||| % [$._config.alert_aggregation_labels, $._config.alert_aggregation_labels],
           'for': '15m',
@@ -554,7 +554,7 @@
           // number of series / ingester in a Cortex cluster is > 1.6M for 2h (we compact
           // the TSDB head every 2h).
           expr: |||
-            avg by (%s) (cortex_ingester_memory_series) > 1.6e6
+            avg by (%s) (cortex_ingester_memory_series{namespace="%(namespace)s"}) > 1.6e6
           ||| % [$._config.alert_aggregation_labels],
           'for': '2h',
           labels: {
@@ -570,7 +570,7 @@
           alert: 'CortexProvisioningTooManyWrites',
           // 80k writes / s per ingester max.
           expr: |||
-            avg by (%s) (rate(cortex_ingester_ingested_samples_total[1m])) > 80e3
+            avg by (%s) (rate(cortex_ingester_ingested_samples_total{namespace="%(namespace)s"}[1m])) > 80e3
           ||| % $._config.alert_aggregation_labels,
           'for': '15m',
           labels: {
@@ -586,9 +586,9 @@
           alert: 'CortexAllocatingTooMuchMemory',
           expr: |||
             (
-              container_memory_working_set_bytes{container="ingester"}
+              container_memory_working_set_bytes{namespace="%(namespace)s", container="ingester"}
                 /
-              container_spec_memory_limit_bytes{container="ingester"}
+              container_spec_memory_limit_bytes{namespace="%(namespace)s", container="ingester"}
             ) > 0.65
           |||,
           'for': '15m',
@@ -605,9 +605,9 @@
           alert: 'CortexAllocatingTooMuchMemory',
           expr: |||
             (
-              container_memory_working_set_bytes{container="ingester"}
+              container_memory_working_set_bytes{namespace="%(namespace)s", container="ingester"}
                 /
-              container_spec_memory_limit_bytes{container="ingester"}
+              container_spec_memory_limit_bytes{namespace="%(namespace)s", container="ingester"}
             ) > 0.8
           |||,
           'for': '15m',
@@ -629,9 +629,9 @@
           alert: 'CortexRulerTooManyFailedPushes',
           expr: |||
             100 * (
-            sum by (%s, instance) (rate(cortex_ruler_write_requests_failed_total[1m]))
+            sum by (%s, instance) (rate(cortex_ruler_write_requests_failed_total{namespace="%(namespace)s"}[1m]))
               /
-            sum by (%s, instance) (rate(cortex_ruler_write_requests_total[1m]))
+            sum by (%s, instance) (rate(cortex_ruler_write_requests_total{namespace="%(namespace)s"}[1m]))
             ) > 1
           ||| % [$._config.alert_aggregation_labels, $._config.alert_aggregation_labels],
           'for': '5m',
@@ -648,9 +648,9 @@
           alert: 'CortexRulerTooManyFailedQueries',
           expr: |||
             100 * (
-            sum by (%s, instance) (rate(cortex_ruler_queries_failed_total[1m]))
+            sum by (%s, instance) (rate(cortex_ruler_queries_failed_total{namespace="%(namespace)s"}[1m]))
               /
-            sum by (%s, instance) (rate(cortex_ruler_queries_total[1m]))
+            sum by (%s, instance) (rate(cortex_ruler_queries_total{namespace="%(namespace)s"}[1m]))
             ) > 1
           ||| % [$._config.alert_aggregation_labels, $._config.alert_aggregation_labels],
           'for': '5m',
@@ -666,9 +666,9 @@
         {
           alert: 'CortexRulerMissedEvaluations',
           expr: |||
-            sum by (%s, instance, rule_group) (rate(cortex_prometheus_rule_group_iterations_missed_total[1m]))
+            sum by (%s, instance, rule_group) (rate(cortex_prometheus_rule_group_iterations_missed_total{namespace="%(namespace)s"}[1m]))
               /
-            sum by (%s, instance, rule_group) (rate(cortex_prometheus_rule_group_iterations_total[1m]))
+            sum by (%s, instance, rule_group) (rate(cortex_prometheus_rule_group_iterations_total{namespace="%(namespace)s"}[1m]))
               > 0.01
           ||| % [$._config.alert_aggregation_labels, $._config.alert_aggregation_labels],
           'for': '5m',
@@ -684,7 +684,7 @@
         {
           alert: 'CortexRulerFailedRingCheck',
           expr: |||
-            sum by (%s, job) (rate(cortex_ruler_ring_check_errors_total[1m]))
+            sum by (%s, job) (rate(cortex_ruler_ring_check_errors_total{namespace="%(namespace)s"}[1m]))
                > 0
           ||| % $._config.alert_aggregation_labels,
           'for': '5m',
@@ -706,7 +706,7 @@
           alert: 'CortexGossipMembersMismatch',
           expr:
             |||
-              memberlist_client_cluster_members_count
+              memberlist_client_cluster_members_count{namespace="%(namespace)s"}
                 != on (%s) group_left
               sum by (%s) (up{job=~".+/%s"})
             ||| % [$._config.alert_aggregation_labels, $._config.alert_aggregation_labels, simpleRegexpOpt($._config.job_names.ring_members)],
