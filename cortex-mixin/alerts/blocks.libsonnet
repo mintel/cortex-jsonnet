@@ -14,7 +14,7 @@
             (max by(%(alert_aggregation_labels)s, instance) (thanos_objstore_bucket_last_successful_upload_time{namespace="cortex", job=~".+/ingester.*"}) > 0)
             and
             # Only if the ingester has ingested samples over the last 4h.
-            (max by(%(alert_aggregation_labels)s, instance) (rate(cortex_ingester_ingested_samples_total{namespace="cortex" [4h])) > 0)
+            (max by(%(alert_aggregation_labels)s, instance) (rate(cortex_ingester_ingested_samples_total{namespace="cortex"}[4h])) > 0)
             and
             # Only if the ingester was ingesting samples 4h ago. This protects from the case the ingester instance
             # had ingested samples in the past, then no traffic was received for a long period and then it starts
