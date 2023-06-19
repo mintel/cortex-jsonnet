@@ -224,7 +224,7 @@
           expr: |||
             (time() - cortex_bucket_stores_blocks_last_successful_sync_timestamp_seconds{namespace="cortex", component="store-gateway"} > 60 * 30)
             and
-            cortex_bucket_stores_blocks_last_successful_sync_timestamp_seconds{namespace="cortex". component="store-gateway"} > 0
+            cortex_bucket_stores_blocks_last_successful_sync_timestamp_seconds{namespace="cortex", component="store-gateway"} > 0
           |||,
           labels: {
             severity: 'critical',
